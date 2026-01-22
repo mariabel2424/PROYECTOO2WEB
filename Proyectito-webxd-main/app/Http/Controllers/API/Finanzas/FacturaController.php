@@ -406,4 +406,56 @@ class FacturaController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Obtener estadísticas de facturas
+     */
+    public function estadisticas(Request $request)
+    {
+        $query = Factura::query();
+
+        // Aplicar filtros si existen
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('fecha_emision', '>=', $request->fecha_desde);
+        }
+        
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('fecha_emision', '<=', $request->fecha_hasta);
+        }
+
+        if ($request->filled('id_tutor')) {
+            $query->where('id_tutor', $request->id_tutor);
+        }
+
+        // Calcular totales
+        $totalFacturado = $query->sum('total');
+        $pagadas = (clone $query)->where('estado', 'pagada')->sum('total');
+        $pendientes = (clone $query)->where('estado', 'pendiente')->sum('total');
+        $vencidas = (clone $query)->where('estado', 'vencida')->sum('total');
+        $canceladas = (clone $query)->where('estado', 'cancelada')->sum('total');
+
+        // Contar facturas
+        $totalFacturas = $query->count();
+        $countPagadas = (clone $query)->where('estado', 'pagada')->count();
+        $countPendientes = (clone $query)->where('estado', 'pendiente')->count();
+        $countVencidas = (clone $query)->where('estado', 'vencida')->count();
+        $countCanceladas = (clone $query)->where('estado', 'cancelada')->count();
+
+        return response()->json([
+            'totales' => [
+                'total_facturado' => round($totalFacturado, 2),
+                'pagadas' => round($pagadas, 2),
+                'pendientes' => round($pendientes, 2),
+                'vencidas' => round($vencidas, 2),
+                'canceladas' => round($canceladas, 2),
+            ],
+            'conteos' => [
+                'total_facturas' => $totalFacturas,
+                'count_pagadas' => $countPagadas,
+                'count_pendientes' => $countPendientes,
+                'count_vencidas' => $countVencidas,
+                'count_canceladas' => $countCanceladas,
+            ]
+        ]);
+    }
 }

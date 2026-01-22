@@ -74,7 +74,7 @@ export const facturasService = {
 
   async update(
     id: number,
-    factura: Partial<FacturaFormData>
+    factura: Partial<FacturaFormData> & { estado?: 'pendiente' | 'pagada' | 'vencida' | 'cancelada' | 'anulada' }
   ): Promise<{ message: string; data: Factura }> {
     const { data } = await apiClient.put<{ message: string; data: Factura }>(
       `${API_ENDPOINTS.facturas}/${id}`,
@@ -162,6 +162,45 @@ export const facturasService = {
         ruc: string;
       };
     }>(`${API_ENDPOINTS.facturas}/${id}/pdf`);
+    return data;
+  },
+
+  async getEstadisticas(params?: {
+    fecha_desde?: string;
+    fecha_hasta?: string;
+    id_tutor?: number;
+  }): Promise<{
+    totales: {
+      total_facturado: number;
+      pagadas: number;
+      pendientes: number;
+      vencidas: number;
+      canceladas: number;
+    };
+    conteos: {
+      total_facturas: number;
+      count_pagadas: number;
+      count_pendientes: number;
+      count_vencidas: number;
+      count_canceladas: number;
+    };
+  }> {
+    const { data } = await apiClient.get<{
+      totales: {
+        total_facturado: number;
+        pagadas: number;
+        pendientes: number;
+        vencidas: number;
+        canceladas: number;
+      };
+      conteos: {
+        total_facturas: number;
+        count_pagadas: number;
+        count_pendientes: number;
+        count_vencidas: number;
+        count_canceladas: number;
+      };
+    }>(`${API_ENDPOINTS.facturas}/estadisticas`, params);
     return data;
   },
 };

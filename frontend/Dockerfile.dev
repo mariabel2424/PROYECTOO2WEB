@@ -1,0 +1,27 @@
+# Dockerfile para desarrollo de Next.js
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependencias
+RUN apk add --no-cache libc6-compat
+
+# Copiar archivos de dependencias
+COPY package.json package-lock.json* pnpm-lock.yaml* ./
+
+# Instalar dependencias
+RUN \
+  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  else npm install; \
+  fi
+
+# Copiar el resto del código
+COPY . .
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["npm", "run", "dev"]
