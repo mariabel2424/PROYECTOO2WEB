@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout';
 import {
@@ -9,6 +9,7 @@ import {
   Pagination,
   Modal,
   ConfirmModal,
+  Spinner,
 } from '@/components/ui';
 import { usePagination } from '@/hooks/usePagination';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,8 +30,7 @@ import {
   XCircleIcon,
 } from '@heroicons/react/24/outline';
 
-export default function InscripcionesPage() {
-  useAuth(); // Verificar autenticación
+function InscripcionesContent() {
   const searchParams = useSearchParams();
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [grupos, setGrupos] = useState<GrupoCurso[]>([]);
@@ -630,5 +630,21 @@ export default function InscripcionesPage() {
         />
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function InscripcionesPage() {
+  useAuth(); // Verificar autenticación
+  
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-20">
+          <Spinner size="lg" />
+        </div>
+      </DashboardLayout>
+    }>
+      <InscripcionesContent />
+    </Suspense>
   );
 }

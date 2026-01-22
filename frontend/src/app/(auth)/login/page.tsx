@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input, Alert } from '@/components/ui';
+import { Button, Input, Alert, Spinner } from '@/components/ui';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
@@ -42,6 +42,64 @@ export default function LoginPage() {
   };
 
   return (
+    <>
+      {redirectUrl && (
+        <Alert variant="info" className="mb-4">
+          Inicia sesión para continuar con la inscripción
+        </Alert>
+      )}
+
+      {error && <Alert variant="error">{error}</Alert>}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Correo"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Ingresa tu correo electrónico"
+          required
+        />
+
+        <Input
+          label="Contraseña"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Ingresa tu contraseña"
+          required
+        />
+
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" className="border-gray-300" />
+            <span className="text-gray-500">Recordarme</span>
+          </label>
+          <Link
+            href="/recuperar-password"
+            className="text-gray-500 hover:text-gray-900 transition"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
+
+        <Button type="submit" className="w-full" isLoading={isLoading}>
+          Entrar
+        </Button>
+      </form>
+
+      <p className="text-center text-sm text-gray-500 mt-6">
+        ¿No tienes cuenta?{' '}
+        <Link href="/registro" className="text-gray-900 hover:underline">
+          Regístrate
+        </Link>
+      </p>
+    </>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen flex">
       {/* Imagen de fondo a la izquierda */}
       <div className="hidden lg:block lg:w-1/2 relative">
@@ -64,57 +122,9 @@ export default function LoginPage() {
             <p className="text-sm text-gray-500 mt-1">Accede a tu cuenta</p>
           </div>
 
-          {redirectUrl && (
-            <Alert variant="info" className="mb-4">
-              Inicia sesión para continuar con la inscripción
-            </Alert>
-          )}
-
-          {error && <Alert variant="error">{error}</Alert>}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Correo"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ingresa tu correo electrónico"
-              required
-            />
-
-            <Input
-              label="Contraseña"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Ingresa tu contraseña"
-              required
-            />
-
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" className="border-gray-300" />
-                <span className="text-gray-500">Recordarme</span>
-              </label>
-              <Link
-                href="/recuperar-password"
-                className="text-gray-500 hover:text-gray-900 transition"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-
-            <Button type="submit" className="w-full" isLoading={isLoading}>
-              Entrar
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            ¿No tienes cuenta?{' '}
-            <Link href="/registro" className="text-gray-900 hover:underline">
-              Regístrate
-            </Link>
-          </p>
+          <Suspense fallback={<Spinner />}>
+            <LoginForm />
+          </Suspense>
         </div>
       </div>
     </div>

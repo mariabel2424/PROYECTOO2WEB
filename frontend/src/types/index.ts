@@ -197,12 +197,16 @@ export interface InscripcionFormData {
   id_deportista: number;
   observaciones?: string;
   generar_factura?: boolean;
+  comprobante_pago?: string;
+  metodo_pago?: string;
+  referencia?: string;
 }
 
 // ============ FINANZAS ============
 export interface Factura {
   id_factura: number;
   numero_factura: string;
+  numero?: string; // Alias para numero_factura
   id_deportista: number;
   id_tutor?: number; // id_usuario del tutor
   id_inscripcion?: number;
@@ -218,6 +222,7 @@ export interface Factura {
   fecha_emision: string;
   fecha_vencimiento?: string;
   metodo_pago?: string;
+  comprobante_pago?: string; // URL de Cloudinary
   observaciones?: string;
   deportista?: Deportista;
   tutor?: Usuario; // Usuario con rol tutor
@@ -240,17 +245,22 @@ export interface DetalleFactura {
 }
 
 export interface FacturaFormData {
-  id_deportista: number;
+  numero?: string;
+  numero_factura?: string;
+  id_deportista?: number;
   id_tutor?: number;
   id_inscripcion?: number;
   concepto: string;
   fecha_emision: string;
   fecha_vencimiento?: string;
+  subtotal?: number;
   descuento?: number;
   impuesto?: number;
+  total?: number;
+  estado?: 'pendiente' | 'pagada' | 'vencida' | 'cancelada' | 'anulada';
   metodo_pago?: string;
   observaciones?: string;
-  detalles: {
+  detalles?: {
     concepto: string;
     descripcion?: string;
     cantidad: number;

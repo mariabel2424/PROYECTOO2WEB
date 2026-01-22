@@ -49,6 +49,14 @@ class Factura extends Model
         'total' => 'decimal:2'
     ];
 
+    protected $appends = ['numero'];
+
+    // Accessor para alias de numero_factura
+    public function getNumeroAttribute()
+    {
+        return $this->numero_factura;
+    }
+
     // ============ RELACIONES ============
 
     /**

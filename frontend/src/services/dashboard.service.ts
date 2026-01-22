@@ -207,6 +207,7 @@ export interface ReporteParticipantesResponse {
 export interface FiltroFechas {
   fecha_desde?: string;
   fecha_hasta?: string;
+  [key: string]: string | undefined;
 }
 
 export const dashboardService = {

@@ -68,7 +68,10 @@ class InscripcionCursoController extends Controller
             'id_grupo' => 'required|exists:grupos_curso,id_grupo',
             'id_deportista' => 'required|exists:deportistas,id_deportista',
             'observaciones' => 'nullable|string',
-            'generar_factura' => 'nullable|boolean'
+            'generar_factura' => 'nullable|boolean',
+            'comprobante_pago' => 'nullable|string|url',
+            'metodo_pago' => 'nullable|string|in:transferencia,efectivo,tarjeta',
+            'referencia' => 'nullable|string|max:255'
         ]);
 
         // Obtener curso y grupo
@@ -142,7 +145,7 @@ class InscripcionCursoController extends Controller
             // Generar factura automáticamente si se solicita
             $factura = null;
             if ($request->generar_factura && $curso->precio > 0) {
-                $factura = $this->generarFacturaInscripcion($inscripcion);
+                $factura = $this->generarFacturaInscripcion($inscripcion, $request);
             }
 
             DB::commit();
@@ -170,7 +173,7 @@ class InscripcionCursoController extends Controller
     /**
      * Genera factura para una inscripción
      */
-    private function generarFacturaInscripcion(InscripcionCurso $inscripcion)
+    private function generarFacturaInscripcion(InscripcionCurso $inscripcion, Request $request = null)
     {
         $inscripcion->load(['curso', 'grupo', 'deportista']);
 
@@ -197,6 +200,9 @@ class InscripcionCursoController extends Controller
             'subtotal' => $inscripcion->curso->precio,
             'total' => $inscripcion->curso->precio,
             'estado' => 'pendiente',
+            'metodo_pago' => $request?->metodo_pago ?? null,
+            'comprobante_pago' => $request?->comprobante_pago ?? null,
+            'observaciones' => $request?->referencia ? "Referencia: " . $request->referencia : null,
             'created_by' => Auth::id()
         ]);
 

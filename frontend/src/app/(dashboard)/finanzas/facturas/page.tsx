@@ -9,6 +9,7 @@ import {
   Modal,
   ConfirmModal,
 } from '@/components/ui';
+import { ComprobanteViewer } from '@/components/inscribir';
 import { usePagination } from '@/hooks/usePagination';
 import { facturasService } from '@/services/finanzas.service';
 import { usuariosService } from '@/services/usuarios.service';
@@ -38,6 +39,22 @@ export default function FacturasPage() {
   const [isChangingEstado, setIsChangingEstado] = useState(false);
   const [filters, setFilters] = useState({ estado: '' });
   const [showFilters, setShowFilters] = useState(false);
+  const [estadisticasGlobales, setEstadisticasGlobales] = useState({
+    totales: {
+      total_facturado: 0,
+      pagadas: 0,
+      pendientes: 0,
+      vencidas: 0,
+      canceladas: 0,
+    },
+    conteos: {
+      total_facturas: 0,
+      count_pagadas: 0,
+      count_pendientes: 0,
+      count_vencidas: 0,
+      count_canceladas: 0,
+    },
+  });
   const [formData, setFormData] = useState({
     numero: '',
     concepto: '',
@@ -65,6 +82,16 @@ export default function FacturasPage() {
         console.error('Error cargando tutores:', err);
         setTutores([]);
       });
+
+    // Cargar estadísticas globales
+    facturasService
+      .getEstadisticas()
+      .then((stats) => {
+        setEstadisticasGlobales(stats);
+      })
+      .catch((err) => {
+        console.error('Error cargando estadísticas:', err);
+      });
   }, []);
 
   const fetchFacturas = useCallback(
@@ -89,6 +116,12 @@ export default function FacturasPage() {
     handleSort,
     refetch,
   } = usePagination<Factura>(fetchFacturas);
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
 
   const handleDelete = (id: number) => {
     setDeleteId(id);
@@ -316,7 +349,14 @@ export default function FacturasPage() {
       header: 'Número',
       sortable: true,
       render: (item: Factura) => (
-        <span className="text-sm font-medium text-gray-900">{item.numero}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-900">{item.numero}</span>
+          {item.comprobante_pago && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800" title="Tiene comprobante">
+              📎
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -455,20 +495,44 @@ export default function FacturasPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <p className="text-xs text-gray-500">Total Facturado</p>
-            <p className="text-lg font-semibold text-gray-900">$0.00</p>
+            <p className="text-xs text-gray-500 mb-1">Total Facturado</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {formatCurrency(estadisticasGlobales.totales.total_facturado)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {estadisticasGlobales.conteos.total_facturas} factura
+              {estadisticasGlobales.conteos.total_facturas !== 1 ? 's' : ''}
+            </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <p className="text-xs text-gray-500">Pagadas</p>
-            <p className="text-lg font-semibold text-emerald-600">$0.00</p>
+            <p className="text-xs text-gray-500 mb-1">Pagadas</p>
+            <p className="text-lg font-semibold text-emerald-600">
+              {formatCurrency(estadisticasGlobales.totales.pagadas)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {estadisticasGlobales.conteos.count_pagadas} factura
+              {estadisticasGlobales.conteos.count_pagadas !== 1 ? 's' : ''}
+            </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <p className="text-xs text-gray-500">Pendientes</p>
-            <p className="text-lg font-semibold text-amber-600">$0.00</p>
+            <p className="text-xs text-gray-500 mb-1">Pendientes</p>
+            <p className="text-lg font-semibold text-amber-600">
+              {formatCurrency(estadisticasGlobales.totales.pendientes)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {estadisticasGlobales.conteos.count_pendientes} factura
+              {estadisticasGlobales.conteos.count_pendientes !== 1 ? 's' : ''}
+            </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <p className="text-xs text-gray-500">Vencidas</p>
-            <p className="text-lg font-semibold text-red-600">$0.00</p>
+            <p className="text-xs text-gray-500 mb-1">Vencidas</p>
+            <p className="text-lg font-semibold text-red-600">
+              {formatCurrency(estadisticasGlobales.totales.vencidas)}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {estadisticasGlobales.conteos.count_vencidas} factura
+              {estadisticasGlobales.conteos.count_vencidas !== 1 ? 's' : ''}
+            </p>
           </div>
         </div>
 
@@ -592,12 +656,28 @@ export default function FacturasPage() {
                   </p>
                 </div>
               </div>
+              
               <div className="pt-4 border-t border-gray-100">
                 <p className="text-gray-400 text-xs mb-1">Concepto</p>
                 <p className="text-sm text-gray-900">
                   {selectedFactura.concepto}
                 </p>
               </div>
+
+              {/* Comprobante de Pago */}
+              {selectedFactura.comprobante_pago && (
+                <div className="pt-4 border-t border-gray-100">
+                  <p className="text-gray-900 font-medium text-sm mb-3">
+                    Comprobante de Pago
+                  </p>
+                  <ComprobanteViewer
+                    imageUrl={selectedFactura.comprobante_pago}
+                    metodoPago={selectedFactura.metodo_pago}
+                    referencia={selectedFactura.observaciones}
+                  />
+                </div>
+              )}
+              
               <div className="pt-4 border-t border-gray-100 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Subtotal</span>
@@ -626,7 +706,20 @@ export default function FacturasPage() {
                   <span>${Number(selectedFactura.total || 0).toFixed(2)}</span>
                 </div>
               </div>
-              <div className="pt-4 border-t border-gray-100 flex justify-end">
+              <div className="pt-4 border-t border-gray-100 flex justify-end gap-2">
+                {selectedFactura.estado === 'pendiente' && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      handleMarcarPagada(selectedFactura);
+                      setShowModal(false);
+                    }}
+                  >
+                    <CreditCardIcon className="h-4 w-4 mr-1" />
+                    Marcar como Pagada
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={() => handleDescargarPDF(selectedFactura)}

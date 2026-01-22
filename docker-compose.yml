@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # Backend Laravel
+  backend:
+    build:
+      context: ./Proyectito-webxd-main
+      dockerfile: Dockerfile
+    container_name: busqueday-backend
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      - APP_NAME=BusquedayAPI
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=busqueday
+      - DB_USERNAME=busqueday_user
+      - DB_PASSWORD=busqueday_pass
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./Proyectito-webxd-main:/var/www/html
+      - backend-storage:/var/www/html/storage
+    ports:
+      - "8000:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - busqueday-network
+
+  # Frontend Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: busqueday-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - busqueday-network
+
+  # Base de Datos MySQL
+  db:
+    image: mysql:8.0
+    container_name: busqueday-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: busqueday
+      MYSQL_USER: busqueday_user
+      MYSQL_PASSWORD: busqueday_pass
+      MYSQL_ROOT_PASSWORD: root_secret_pass
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - busqueday-network
+
+  # Redis para cache y sesiones
+  redis:
+    image: redis:7-alpine
+    container_name: busqueday-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - busqueday-network
+
+  # phpMyAdmin (opcional)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: busqueday-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root_secret_pass
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - busqueday-network
+
+volumes:
+  db-data:
+  redis-data:
+  backend-storage:
+
+networks:
+  busqueday-network:
+    driver: bridge

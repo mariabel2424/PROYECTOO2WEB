@@ -91,7 +91,7 @@ export default function EditarFacturaPage() {
 
     try {
       await facturasService.update(id, {
-        numero: formData.numero,
+        numero_factura: formData.numero,
         id_tutor: formData.id_tutor ? parseInt(formData.id_tutor) : undefined,
         concepto: formData.concepto,
         subtotal: parseFloat(formData.subtotal) || 0,

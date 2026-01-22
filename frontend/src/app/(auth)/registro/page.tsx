@@ -30,6 +30,7 @@ export default function RegistroPage() {
     e.preventDefault();
     setError('');
 
+    // Validaciones del frontend
     if (formData.password !== formData.password_confirmation) {
       setError('Las contraseñas no coinciden');
       return;
@@ -40,13 +41,50 @@ export default function RegistroPage() {
       return;
     }
 
+    // Validar formato de cédula (10 dígitos)
+    if (formData.cedula && !/^\d{10}$/.test(formData.cedula)) {
+      setError('La cédula debe tener 10 dígitos numéricos');
+      return;
+    }
+
+    // Validar formato de teléfono (10 dígitos)
+    if (formData.telefono && !/^\d{10}$/.test(formData.telefono)) {
+      setError('El teléfono debe tener 10 dígitos numéricos');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Por favor ingresa un correo electrónico válido');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       await register(formData);
       router.push('/mis-participantes');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al registrarse');
+      // Mejorar el manejo de errores del backend
+      if (err instanceof Error) {
+        const errorMessage = err.message.toLowerCase();
+        
+        // Detectar errores específicos
+        if (errorMessage.includes('cedula') && errorMessage.includes('ya')) {
+          setError('Esta cédula ya está registrada. Por favor verifica o usa otra cédula.');
+        } else if (errorMessage.includes('email') && errorMessage.includes('ya')) {
+          setError('Este correo electrónico ya está registrado. ¿Deseas iniciar sesión?');
+        } else if (errorMessage.includes('telefono') && errorMessage.includes('ya')) {
+          setError('Este teléfono ya está registrado. Por favor verifica o usa otro número.');
+        } else if (errorMessage.includes('validation') || errorMessage.includes('validación')) {
+          setError('Por favor verifica que todos los campos estén correctos.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Error al registrarse. Por favor intenta nuevamente.');
+      }
     } finally {
       setIsLoading(false);
     }

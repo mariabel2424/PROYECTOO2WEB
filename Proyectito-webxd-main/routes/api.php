@@ -235,6 +235,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ver todas: admin
     Route::get('facturas', [FacturaController::class, 'index'])
         ->middleware('permission:facturas.ver');
+    Route::get('facturas/estadisticas', [FacturaController::class, 'estadisticas'])
+        ->middleware('permission:facturas.ver');
     Route::get('facturas/reporte/facturacion', [FacturaController::class, 'reporteFacturacion'])
         ->middleware('permission:facturas.reportes');
     Route::get('facturas/{id}', [FacturaController::class, 'show']);

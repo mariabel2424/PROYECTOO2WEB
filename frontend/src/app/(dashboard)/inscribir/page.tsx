@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout';
 import { Card, Button, Alert, Spinner, Select } from '@/components/ui';
+import { CursoStep, ImageUploader } from '@/components/inscribir';
 import { cursosService, inscripcionesService } from '@/services/cursos.service';
 import { deportistasService } from '@/services/deportistas.service';
 import {
@@ -15,7 +16,7 @@ import type { Curso, GrupoCurso, Deportista } from '@/types';
 
 type Step = 'participante' | 'curso' | 'pago' | 'confirmacion';
 
-export default function InscribirPage() {
+function InscribirContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -39,6 +40,7 @@ export default function InscribirPage() {
     metodo_pago: 'transferencia',
     referencia: '',
     observaciones: '',
+    comprobante_pago: '',
   });
 
   const formatCurrency = (n: number) =>
@@ -46,31 +48,6 @@ export default function InscribirPage() {
       style: 'currency',
       currency: 'USD',
     }).format(n);
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  const formatTime = (t: string) => {
-    if (!t) return '';
-    const [hr, min] = t.split(':');
-    const h = parseInt(hr);
-    return `${h % 12 || 12}:${min} ${h >= 12 ? 'PM' : 'AM'}`;
-  };
-  const getDias = (dias: string[] | number[] | undefined) => {
-    if (!dias?.length) return 'Por definir';
-    const map: Record<string, string> = {
-      '0': 'Dom',
-      '1': 'Lun',
-      '2': 'Mar',
-      '3': 'Mié',
-      '4': 'Jue',
-      '5': 'Vie',
-      '6': 'Sáb',
-    };
-    return dias.map((d) => map[String(d)] || String(d)).join(', ');
-  };
 
   const loadData = useCallback(async () => {
     try {
@@ -121,6 +98,12 @@ export default function InscribirPage() {
       setError('Completa todos los campos');
       return;
     }
+    
+    if (!pagoData.comprobante_pago) {
+      setError('Por favor sube el comprobante de pago');
+      return;
+    }
+    
     setSubmitting(true);
     setError('');
     try {
@@ -130,6 +113,9 @@ export default function InscribirPage() {
         id_deportista: selectedParticipante,
         generar_factura: true,
         observaciones: pagoData.observaciones || undefined,
+        comprobante_pago: pagoData.comprobante_pago,
+        metodo_pago: pagoData.metodo_pago,
+        referencia: pagoData.referencia,
       });
       setSuccess(
         '¡Inscripción realizada! El administrador verificará tu pago.'
@@ -289,106 +275,17 @@ export default function InscribirPage() {
 
           {/* Step 2 */}
           {step === 'curso' && (
-            <div className="space-y-4">
-              <h2 className="font-medium">Selecciona el curso y horario</h2>
-              <div className="space-y-2">
-                {cursos.map((c) => (
-                  <button
-                    key={c.id_curso}
-                    onClick={() => handleCursoSelect(c.id_curso)}
-                    className={`w-full p-4 text-left border rounded-lg ${
-                      selectedCurso === c.id_curso
-                        ? 'border-indigo-600 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-300'
-                    }`}
-                  >
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">{c.nombre}</p>
-                        <p className="text-sm text-gray-500">
-                          {formatDate(c.fecha_inicio)} -{' '}
-                          {formatDate(c.fecha_fin)}
-                        </p>
-                      </div>
-                      <p className="font-semibold text-indigo-600">
-                        {formatCurrency(c.precio || 0)}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              {selectedCurso && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Horario</label>
-                  {loadingGrupos ? (
-                    <Spinner />
-                  ) : grupos.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">
-                      No hay horarios
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {grupos.map((g) => {
-                        const cupos = g.cupo_maximo - (g.cupo_actual || 0);
-                        const full = cupos <= 0;
-                        return (
-                          <button
-                            key={g.id_grupo}
-                            onClick={() =>
-                              !full && setSelectedGrupo(g.id_grupo)
-                            }
-                            disabled={full}
-                            className={`w-full p-3 text-left border rounded-lg ${
-                              full
-                                ? 'opacity-50'
-                                : selectedGrupo === g.id_grupo
-                                ? 'border-indigo-600 bg-indigo-50'
-                                : 'border-gray-200 hover:border-indigo-300'
-                            }`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {g.nombre}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {formatTime(g.hora_inicio || '')} -{' '}
-                                  {formatTime(g.hora_fin || '')} |{' '}
-                                  {getDias(g.dias_semana)}
-                                </p>
-                              </div>
-                              <span
-                                className={`text-xs px-2 py-1 rounded ${
-                                  full
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-green-100 text-green-700'
-                                }`}
-                              >
-                                {full ? 'Lleno' : `${cupos} cupos`}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex justify-between pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => setStep('participante')}
-                >
-                  Atrás
-                </Button>
-                <Button
-                  onClick={() => setStep('pago')}
-                  disabled={!selectedGrupo}
-                >
-                  Continuar
-                </Button>
-              </div>
-            </div>
+            <CursoStep
+              cursos={cursos}
+              grupos={grupos}
+              selectedCurso={selectedCurso}
+              selectedGrupo={selectedGrupo}
+              loadingGrupos={loadingGrupos}
+              onCursoSelect={handleCursoSelect}
+              onGrupoSelect={setSelectedGrupo}
+              onBack={() => setStep('participante')}
+              onContinue={() => setStep('pago')}
+            />
           )}
 
           {/* Step 3 */}
@@ -417,6 +314,7 @@ export default function InscribirPage() {
                   </span>
                 </div>
               </div>
+              
               <Select
                 label="Método de pago"
                 value={pagoData.metodo_pago}
@@ -424,11 +322,12 @@ export default function InscribirPage() {
                   setPagoData({ ...pagoData, metodo_pago: e.target.value })
                 }
                 options={[
-                  { value: 'transferencia', label: 'Transferencia' },
+                  { value: 'transferencia', label: 'Transferencia Bancaria' },
                   { value: 'efectivo', label: 'Efectivo' },
                   { value: 'tarjeta', label: 'Tarjeta' },
                 ]}
               />
+              
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Referencia de pago
@@ -439,19 +338,47 @@ export default function InscribirPage() {
                   onChange={(e) =>
                     setPagoData({ ...pagoData, referencia: e.target.value })
                   }
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Número de transferencia"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Número de referencia o transacción"
                 />
               </div>
+
+              <ImageUploader
+                onImageUpload={(url) =>
+                  setPagoData({ ...pagoData, comprobante_pago: url })
+                }
+                currentImage={pagoData.comprobante_pago}
+              />
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Observaciones (opcional)
+                </label>
+                <textarea
+                  value={pagoData.observaciones}
+                  onChange={(e) =>
+                    setPagoData({ ...pagoData, observaciones: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={3}
+                  placeholder="Información adicional sobre el pago"
+                />
+              </div>
+              
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                 Tu inscripción quedará pendiente hasta que el administrador
                 verifique el pago.
               </div>
+              
               <div className="flex justify-between pt-4">
                 <Button variant="secondary" onClick={() => setStep('curso')}>
                   Atrás
                 </Button>
-                <Button onClick={handleSubmit} isLoading={submitting}>
+                <Button 
+                  onClick={handleSubmit} 
+                  isLoading={submitting}
+                  disabled={!pagoData.comprobante_pago}
+                >
                   Confirmar Inscripción
                 </Button>
               </div>
@@ -500,5 +427,19 @@ export default function InscribirPage() {
         </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function InscribirPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-20">
+          <Spinner size="lg" />
+        </div>
+      </DashboardLayout>
+    }>
+      <InscribirContent />
+    </Suspense>
   );
 }
